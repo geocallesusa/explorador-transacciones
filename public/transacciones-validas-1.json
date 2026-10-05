@@ -1,0 +1,16 @@
+[
+  {
+    "id": "tx_001",
+    "amount": "100.50",
+    "currency": "USD",
+    "timestamp": "2025-03-10 14:22:00",
+    "status": "completed"
+  },
+  {
+    "id": "tx_002",
+    "amount": "€99,99",
+    "currency": "EUR",
+    "timestamp": "2025-03-11T12:30:00Z",
+    "status": "success"
+  }
+]

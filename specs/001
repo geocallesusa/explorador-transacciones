@@ -1,0 +1,325 @@
+# Spec 001: Normalización y exploración de transacciones multifuente
+
+## 1. Resumen
+El proyecto consiste en una aplicación para normalizar, validar y explorar transacciones financieras provenientes de múltiples fuentes. La solución debe leer archivos JSON, detectar el tipo o origen de cada registro, convertir las entradas a un formato único y permitir la exploración y filtrado de los datos desde una interfaz interactiva.
+
+El trabajo debe estar guiado por Spec Driven Development (SSD), basándose en la constitución del proyecto y en las reglas definidas en AGENTS.md.
+
+## 2. Objetivo del producto
+Construir un sistema que permita:
+- cargar transacciones desde archivos JSON;
+- soportar distintas fuentes y estructuras de datos;
+- detectar la fuente o formato de cada transacción;
+- normalizar todos los valores a un esquema común;
+- descartar registros inválidos con conteo explícito;
+- mostrar métricas de procesamiento;
+- explorar y filtrar registros en una interfaz funcional.
+
+## 3. Alcance
+### Incluye
+- ingestión de JSON local;
+- identificación de campos por fuente o patrón;
+- normalización de ID, monto, moneda, fecha y estado;
+- validación de transacciones;
+- métricas globales de registros válidos e inválidos;
+- interfaz de exploración con filtros;
+- archivo de configuración con reglas y mapeos.
+
+### Excluye
+- conexión a APIs externas;
+- persistencia de datos en base de datos;
+- autenticación de usuarios;
+- lógica de negocio financiera compleja fuera del formato requerido;
+- generación de código de implementación en esta etapa.
+
+## 4. Usuarios y casos de uso
+### Usuario principal
+Operador o analista que necesita revisar transacciones provenientes de distintos orígenes y detectar anomalías o inconsistencias.
+
+### Casos de uso
+1. Cargar un archivo JSON con transacciones.
+2. Ver si cada registro fue aceptado o descartado.
+3. Revisar los campos normalizados en un formato uniforme.
+4. Filtrar transacciones por estado, moneda, fecha o origen.
+5. Ver métricas generales del lote procesado.
+6. Identificar registros inválidos y entender por qué fueron rechazados.
+
+## 5. Requisitos funcionales
+### FR-01: Carga de datos
+El sistema debe permitir cargar archivos JSON desde el navegador local, uno o varios en una misma ejecución.
+
+Criterio de aceptación medible:
+- el usuario puede seleccionar uno o varios archivos con extensión .json;
+- el sistema acepta un array de objetos JSON o una estructura equivalente reconocida;
+- si el contenido no es válido, se muestra un error claro y no se bloquea la UI;
+- el lote procesado contiene al menos 1 registro o se reporta un error de entrada.
+
+### FR-02: Detección de fuente o tipo
+El sistema debe inferir la fuente o tipo de transacción a partir de los nombres y formatos de los campos detectados.
+
+Criterio de aceptación medible:
+- el sistema reconoce al menos dos estructuras de entrada distintas;
+- la detección se realiza en lógica centralizada y no en componentes visuales;
+- si no se reconoce una estructura, la transacción se marca como inválida con motivo asociado.
+
+### FR-03: Normalización de campos
+Cada transacción debe transformarse al esquema común de salida:
+
+{
+  "id": "[id correlativo de la transacción]",
+  "id_fuente": "[id según la fuente]",
+  "amount": "[monto de la transacción]",
+  "currency": "[moneda de la transacción]",
+  "timestamp": "[fecha y hora de la transacción]",
+  "status": "[estado de la transacción]"
+}
+
+Criterio de aceptación medible:
+- todos los campos se convierten a texto cuando correspondan;
+- id inicia en "01" y se incrementa secuencialmente por transacción válida;
+- amount elimina prefijos monetarios y agrega ".00" si no incluye decimales;
+- currency usa código ISO 4217 normalizado;
+- timestamp usa el formato "yyyy-MM-dd hh:mm:ss";
+- status se normaliza a uno de: completed | success | failed | pending | OK;
+- ningún campo de salida queda vacío o undefined.
+
+### FR-04: Validación y descarte
+Una transacción debe ser descartada si no cumple la estructura esperada o faltan campos requeridos.
+
+Criterio de aceptación medible:
+- cada registro inválido debe quedar identificado con estado "rechazado" o equivalente;
+- cada rechazo debe incluir un motivo de descarte; ejemplos: campo obligatorio faltante, moneda no soportada, fecha inválida, estado no reconocido;
+- las transacciones válidas no aparecen en la lista de inválidos;
+- el conteo total de descartados debe coincidir con el número real de registros rechazados.
+
+### FR-05: Métricas del lote
+El sistema debe mostrar un resumen del procesamiento.
+
+Debe existir una vista o bloque de resumen con:
+- total de registros leídos;
+- total de registros válidos;
+- total de registros inválidos o descartados;
+- porcentaje de validez y rechazo;
+- conteo por estado, moneda o fuente si aplica.
+
+Criterio de aceptación medible:
+- la suma de válidos + inválidos debe ser igual al total leído;
+- los valores numéricos deben coincidir con los registros visibles en la UI.
+
+### FR-06: Interfaz de exploración
+La interfaz debe permitir explorar, filtrar y revisar los registros normalizados.
+
+Criterio de aceptación medible:
+- existe una vista con tabla o lista de transacciones;
+- se puede filtrar por estado, moneda, fecha, fuente o texto libre;
+- la UI muestra al menos las columnas: id, id_fuente, amount, currency, timestamp, status;
+- las transacciones inválidas aparecen con clara diferenciación visual y motivo de rechazo;
+- la interfaz no depende de salida por consola para mostrar resultados.
+
+### FR-07: Reglas de configuración
+Debe existir un archivo de reglas o configuración con la lógica de validación y normalización.
+
+Criterio de aceptación medible:
+- se define un mapeo explícito de estados válidos;
+- se define un mapeo explícito de monedas soportadas;
+- se define una lista de formatos de fecha aceptados;
+- la configuración queda fuera de la lógica de renderizado y es reutilizable por la capa de negocio.
+
+### FR-08: Datos de prueba
+El proyecto debe incluir al menos:
+- 2 archivos con transacciones válidas;
+- 1 archivo con transacciones inválidas.
+
+Criterio de aceptación medible:
+- cada archivo representa un caso distinto de entrada;
+- al menos un archivo cubre formato alternativo de campos;
+- al menos un archivo incluye errores esperables y debe generar rechazos verificables.
+
+### FR-09: Manejo de errores de entrada
+El sistema debe manejar entradas incompletas o malformadas sin romper la experiencia del usuario.
+
+Criterio de aceptación medible:
+- un JSON inválido debe mostrarse como error de archivo sin provocar bloqueo;
+- una estructura vacía debe producir una reseña clara de "sin registros válidos" o "archivo sin datos";
+- los errores específicos quedan visibles en consola o UI para diagnóstico.
+
+### FR-10: Separación de responsabilidades
+La lógica de procesamiento debe estar separada de la capa visual.
+
+Criterio de aceptación medible:
+- no se mezclan las reglas de normalización con JSX o estilos de la interfaz;
+- el código de negocio puede probarse de forma aislada sin depender del DOM;
+- la UI solo consume datos ya normalizados.
+
+## 6. Regla de normalización de datos
+### 6.1 Tipos y conversiones
+- Todos los valores deben tratarse como texto al final del proceso.
+- Si un valor es numérico, se convierte a string.
+- Si incluye símbolos o prefijos, se eliminan solo cuando correspondan a moneda o formato de número.
+
+### 6.2 ID
+- id: correlativo del sistema, iniciando en "01".
+- id_fuente: identificador original de la fuente, convertido a texto solo si es necesario.
+
+### 6.3 Monto
+- si el monto trae símbolo de moneda, debe eliminarse;
+- si no incluye decimales, debe agregarse ".00";
+- el valor final debe quedar en formato estándar, por ejemplo "100.50".
+
+### 6.4 Moneda
+- usar la abreviatura ISO 4217;
+- si la moneda aparece dentro del monto, debe extraerse y normalizarse;
+- si llega como símbolo, debe mapearse a su abreviatura equivalente;
+- si no existe soporte para la moneda, la transacción será rechazada.
+
+### 6.5 Fecha y hora
+- debe quedar en formato "yyyy-MM-dd hh:mm:ss";
+- si no trae segundos, deben agregarse ":00";
+- se aceptan varios formatos de entrada si pueden normalizarse determinísticamente;
+- si la fecha es inválida, la transacción se rechaza.
+
+### 6.6 Estado
+Los estados válidos son:
+- completed
+- success
+- failed
+- pending
+- OK
+
+Cualquier valor no reconocido debe descartarse o mapearse solo si existe una regla explícita.
+
+## 7. Regla de validación
+Se considera una transacción válida si:
+- tiene la estructura esperada;
+- incluye los campos mínimos del esquema final;
+- los datos son legibles y transformables;
+- no faltan campos obligatorios;
+- la conversión no genera ambigüedad;
+- la fecha, moneda y estado cumplen con las reglas definidas.
+
+Se considera inválida si:
+- falta algún campo obligatorio;
+- la estructura del JSON no coincide con la esperada;
+- la fecha, moneda o estado no pueden normalizarse con seguridad;
+- el contenido no es usable para el esquema final;
+- el valor no pertenece a un conjunto soportado.
+
+### Rechazos esperados
+El sistema debe reportar motivos como:
+- "campo obligatorio faltante";
+- "moneda no soportada";
+- "estado no válido";
+- "fecha inválida";
+- "JSON malformado o estructura no reconocida".
+
+## 8. Esquema de salida esperado
+```json
+{
+  "id": "0001",
+  "id_fuente": "tx_001",
+  "amount": "100.50",
+  "currency": "USD",
+  "timestamp": "2025-03-10 14:22:00",
+  "status": "completed"
+}
+```
+
+## 9. Requisitos de interfaz
+La UI debe incluir:
+- selector de carga de archivos JSON desde equipo local;
+- vista de registros procesados;
+- tabla con columnas principales;
+- filtros por estado, moneda, fecha, fuente o texto libre;
+- resumen de métricas;
+- diferencia visual entre registros válidos y rechazados;
+- motivo de rechazo visible para los registros descartados.
+
+La interfaz no debe depender únicamente de impresiones por consola para verificar resultados.
+
+## 10. Requisitos no funcionales
+### 10.1 Mantenibilidad
+- La lógica de normalización debe separarse de la interfaz.
+- Las reglas de negocio deben estar centralizadas.
+- El flujo debe ser legible para desarrolladores principiantes.
+
+### 10.2 Seguridad y robustez
+- Se debe evitar la ejecución de lógica peligrosa sobre entradas no válidas.
+- La aplicación debe manejar errores sin romper la sesión actual.
+- Los errores deben presentarse con mensajes comprensibles.
+
+### 10.3 Usabilidad
+- La experiencia debe ser clara y directa para una persona analizando un lote de transacciones.
+- La UI debe permitir revisar rápidamente registros válidos, rechazados y métricas.
+
+## 11. Archivo de configuración
+Se debe mantener un conjunto de reglas con:
+- mapeo de estados permitidos;
+- mapeo de monedas soportadas;
+- formatos de fecha aceptados;
+- conversiones específicas por fuente o tipo de transacción;
+- definición de motivos de rechazo.
+
+Esto debe estar separado de la lógica de UI y ser reutilizable por la capa de procesamiento.
+
+## 12. Casos de prueba propuestos
+### Caso 1: archivo válido con estructura estándar
+- entrada con id, amount, currency, timestamp y status ya normalizados;
+- resultado esperado: registro aceptado y mostrado en la tabla.
+
+### Caso 2: archivo válido con estructura alternativa
+- entrada con transaction_id, total, currency_code, created_at y state;
+- resultado esperado: reconocimiento por estructura alternativa, normalización a esquema final y aceptación.
+
+### Caso 3: archivo con moneda y cantidad formateadas
+- monto con símbolo de moneda y sin decimales;
+- resultado esperado: eliminación del símbolo y adición de ".00".
+
+### Caso 4: archivo con fechas incompletas
+- timestamp sin segundos;
+- resultado esperado: conversión a formato "yyyy-MM-dd hh:mm:ss".
+
+### Caso 5: archivo inválido por estado desconocido
+- status = "rejected" o valor no soportado;
+- resultado esperado: transacción descartada con motivo "estado no válido".
+
+### Caso 6: archivo inválido por campo faltante
+- no incluye currency o timestamp;
+- resultado esperado: transacción descartada y contada como inválida.
+
+### Caso 7: JSON malformado
+- archivo con sintaxis incorrecta;
+- resultado esperado: error de carga y bloqueo del proceso sin romper la UI.
+
+## 13. Entregables esperados
+- aplicación funcional para exploración de transacciones;
+- archivo(s) de prueba con datos válidos e inválidos;
+- lógica de normalización y validación separada de la UI;
+- interfaz con filtros y métricas;
+- documentación breve del diseño y uso de IA;
+- constitución del proyecto vigente como fuente de decisiones.
+
+## 14. Criterios de aceptación QA
+La especificación se considera satisfecha cuando:
+- el sistema procesa JSON de múltiples estructuras;
+- la normalización produce un formato uniforme y consistente;
+- los registros inválidos se descartan y se reportan con motivo claro;
+- las métricas reflejan exactamente el lote cargado;
+- la UI permite filtrar y revisar transacciones válidas e inválidas;
+- la lógica de negocio no está acoplada a componentes visuales;
+- la solución cumple con AGENTS.md y la constitución del proyecto.
+
+## 15. Definición de terminado
+El trabajo está terminado cuando:
+- todas las reglas de negocio están documentadas y verificables;
+- los casos de prueba positivos y negativos pasan en la implementación;
+- los resultados de métricas coinciden con los registros procesados;
+- la interfaz permite revisión real de datos sin depender únicamente de la consola;
+- el producto cumple con el alcance y la política de calidad definida por esta especificación.
+
+## 16. Decisiones finales del alcance
+1. La interfaz aceptará archivos desde el navegador local únicamente.
+2. La aplicación trabajará solo en memoria durante la sesión actual; no se persistirá en archivo.
+3. Las transacciones inválidas deben mostrarse en la interfaz con un motivo de rechazo para facilitar la revisión.
+
+## 17. Especificación cerrada para implementación
+Con estas decisiones, la especificación queda definida y lista para pasar a la etapa de implementación. La solución debe cumplir con la constitución del proyecto y con la guía de AGENTS.md, manteniendo la lógica de normalización separada de la capa visual y garantizando una interfaz funcional de exploración de transacciones.

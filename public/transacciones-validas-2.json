@@ -1,0 +1,16 @@
+[
+  {
+    "transaction_id": 204,
+    "total": 10050,
+    "currency_code": "usd",
+    "created_at": "10/03/2025 14:22",
+    "state": "OK"
+  },
+  {
+    "transaction_id": 205,
+    "total": "£50",
+    "currency_code": "gbp",
+    "created_at": "2025-03-12 07:05",
+    "state": "pending"
+  }
+]

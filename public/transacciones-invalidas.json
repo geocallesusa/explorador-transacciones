@@ -1,0 +1,21 @@
+[
+  {
+    "id": "bad_1",
+    "amount": "200",
+    "currency": "ARS",
+    "timestamp": "2025/04/01 12:00",
+    "status": "rejected"
+  },
+  {
+    "transaction_id": 777,
+    "total": "USD 45",
+    "currency_code": "XYZ",
+    "created_at": "bad-date",
+    "state": "unknown"
+  },
+  {
+    "amount": "10.00",
+    "currency": "USD",
+    "timestamp": "2025-03-12 15:00:00"
+  }
+]
