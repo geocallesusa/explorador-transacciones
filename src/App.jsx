@@ -44,6 +44,15 @@ function App() {
     });
   }, [validTransactions, search, statusFilter, currencyFilter]);
 
+  const hasActiveFilters = Boolean(search.trim()) || statusFilter !== 'all' || currencyFilter !== 'all';
+  const hasProcessedBatch = metrics.totalRead > 0 || metrics.invalid > 0;
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setCurrencyFilter('all');
+  };
+
   const handleLoadFiles = async (event) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
@@ -77,96 +86,140 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Normalización y exploración</p>
           <h1>Explorador de transacciones</h1>
+          <p className="page-intro">
+            Carga archivos JSON para revisar transacciones válidas, detectar registros rechazados y explorar los
+            resultados.
+          </p>
         </div>
 
         <div className="action-group">
-          <label className="upload-button">
-            Cargar JSON
-            <input type="file" accept=".json,application/json" multiple onChange={handleLoadFiles} />
+          <label className="upload-button" htmlFor="transaction-files">
+            Seleccionar archivos JSON
+            <input
+              id="transaction-files"
+              type="file"
+              accept=".json,application/json"
+              multiple
+              aria-describedby="upload-help"
+              onChange={handleLoadFiles}
+            />
           </label>
           <button type="button" className="secondary-button" onClick={handleLoadExamples}>
             Cargar ejemplos
           </button>
+          <p id="upload-help" className="upload-help">
+            Puedes seleccionar varios archivos a la vez.
+          </p>
         </div>
       </header>
 
-      {error ? <div className="alert-box">{error}</div> : null}
-
-      <section className="stats-grid">
-        <article className="stat-card total">
-          <span>Total procesado</span>
-          <strong>{metrics.totalRead || 0}</strong>
-        </article>
-        <article className="stat-card valid">
-          <span>Registros válidos</span>
-          <strong>{metrics.valid || 0}</strong>
-        </article>
-        <article className="stat-card invalid">
-          <span>Registros inválidos</span>
-          <strong>{metrics.invalid || 0}</strong>
-        </article>
-        <article className="stat-card percent">
-          <span>Porcentaje válido</span>
-          <strong>{metrics.percentageValid ? `${metrics.percentageValid.toFixed(1)}%` : '0%'}</strong>
-        </article>
-      </section>
-
-      <section className="panel controls-panel">
-        <div className="field-group">
-          <label htmlFor="search">Buscar</label>
-          <input
-            id="search"
-            type="text"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar por ID, monto o estado..."
-          />
+      {error ? (
+        <div className="alert-box" role="alert">
+          {error}
         </div>
+      ) : null}
 
-        <div className="field-group">
-          <label htmlFor="status-filter">Estado</label>
-          <select id="status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">Todos</option>
-            {VALID_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field-group">
-          <label htmlFor="currency-filter">Moneda</label>
-          <select id="currency-filter" value={currencyFilter} onChange={(event) => setCurrencyFilter(event.target.value)}>
-            <option value="all">Todas</option>
-            {availableCurrencies.map((currency) => (
-              <option key={currency} value={currency}>
-                {currency}
-              </option>
-            ))}
-          </select>
+      <section className="stats-section" aria-labelledby="summary-heading" aria-live="polite">
+        <h2 id="summary-heading">Resumen de la carga</h2>
+        <div className="stats-grid">
+          <article className="stat-card total">
+            <span>Total de registros</span>
+            <strong>{metrics.totalRead || 0}</strong>
+          </article>
+          <article className="stat-card valid">
+            <span>Válidos</span>
+            <strong>{metrics.valid || 0}</strong>
+          </article>
+          <article className="stat-card invalid">
+            <span>Rechazados</span>
+            <strong>{metrics.invalid || 0}</strong>
+          </article>
+          <article className="stat-card percent">
+            <span>Porcentaje válido</span>
+            <strong>{metrics.percentageValid ? `${metrics.percentageValid.toFixed(1)}%` : '0%'}</strong>
+          </article>
         </div>
       </section>
 
-      <section className="panel table-panel">
+      <section className="panel filter-panel" aria-labelledby="filters-heading">
+        <div className="panel-heading">
+          <div>
+            <h2 id="filters-heading">Buscar y filtrar</h2>
+            <p>Refina la lista por ID, monto, fecha, estado o moneda.</p>
+          </div>
+          <button
+            type="button"
+            className="clear-filters-button"
+            onClick={handleClearFilters}
+            disabled={!hasActiveFilters}
+          >
+            Limpiar filtros
+          </button>
+        </div>
+
+        <div className="controls-panel">
+          <div className="field-group">
+            <label htmlFor="search">Buscar transacciones</label>
+            <input
+              id="search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Por ejemplo, tx_001 o 100.50"
+            />
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="status-filter">Filtrar por estado</label>
+            <select id="status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="all">Todos los estados</option>
+              {VALID_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="currency-filter">Filtrar por moneda</label>
+            <select
+              id="currency-filter"
+              value={currencyFilter}
+              onChange={(event) => setCurrencyFilter(event.target.value)}
+            >
+              <option value="all">Todas las monedas</option>
+              {availableCurrencies.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel table-panel" aria-labelledby="valid-heading">
         <div className="panel-header">
-          <h2>Transacciones válidas</h2>
-          <span>{filteredTransactions.length} resultados</span>
+          <h2 id="valid-heading">Transacciones válidas</h2>
+          <span aria-live="polite">
+            {filteredTransactions.length} de {validTransactions.length} registros
+          </span>
         </div>
 
         {filteredTransactions.length ? (
           <div className="table-wrap">
             <table>
+              <caption className="sr-only">Lista de transacciones que pasaron la validación</caption>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>ID fuente</th>
-                  <th>Monto</th>
-                  <th>Moneda</th>
-                  <th>Timestamp</th>
-                  <th>Estado</th>
+                  <th scope="col">ID</th>
+                  <th scope="col">ID de origen</th>
+                  <th scope="col">Monto</th>
+                  <th scope="col">Moneda</th>
+                  <th scope="col">Fecha y hora</th>
+                  <th scope="col">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,7 +231,7 @@ function App() {
                     <td>{item.currency}</td>
                     <td>{item.timestamp}</td>
                     <td>
-                      <span className="status-badge">{item.status}</span>
+                      <span className={`status-badge status-${item.status.toLowerCase()}`}>{item.status}</span>
                     </td>
                   </tr>
                 ))}
@@ -186,24 +239,31 @@ function App() {
             </table>
           </div>
         ) : (
-          <p className="empty-state">No hay transacciones válidas para mostrar.</p>
+          <p className="empty-state" role="status">
+            {hasActiveFilters
+              ? 'No hay resultados con estos filtros. Prueba otros criterios o límpialos.'
+              : hasProcessedBatch
+                ? 'No se encontraron transacciones válidas en los archivos cargados.'
+                : 'Carga archivos JSON o usa los ejemplos para ver las transacciones aquí.'}
+          </p>
         )}
       </section>
 
-      <section className="panel invalid-panel">
+      <section className="panel invalid-panel" aria-labelledby="rejected-heading">
         <div className="panel-header">
-          <h2>Transacciones rechazadas</h2>
+          <h2 id="rejected-heading">Registros rechazados</h2>
           <span>{invalidTransactions.length} registros</span>
         </div>
 
         {invalidTransactions.length ? (
           <div className="table-wrap">
             <table>
+              <caption className="sr-only">Lista de registros rechazados y el motivo de cada rechazo</caption>
               <thead>
                 <tr>
-                  <th>Archivo</th>
-                  <th>Motivo</th>
-                  <th>Registro</th>
+                  <th scope="col">Archivo</th>
+                  <th scope="col">Motivo del rechazo</th>
+                  <th scope="col">Datos recibidos</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,7 +284,11 @@ function App() {
             </table>
           </div>
         ) : (
-          <p className="empty-state">No hay registros inválidos.</p>
+          <p className="empty-state">
+            {hasProcessedBatch
+              ? 'No se rechazaron registros en esta carga.'
+              : 'Los registros rechazados aparecerán aquí después de cargar archivos.'}
+          </p>
         )}
       </section>
     </div>
